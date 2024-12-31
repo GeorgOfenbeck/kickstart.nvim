@@ -91,7 +91,7 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = false
+vim.g.have_nerd_font = true
 
 -- [[ Setting options ]]
 -- See `:help vim.opt`
@@ -102,7 +102,7 @@ vim.g.have_nerd_font = false
 vim.opt.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
--- vim.opt.relativenumber = true
+vim.opt.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
@@ -185,10 +185,14 @@ vim.keymap.set('t', '<Esc><Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' }
 --  Use CTRL+<hjkl> to switch between windows
 --
 --  See `:help wincmd` for a list of all window commands
-vim.keymap.set('n', '<C-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
-vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
-vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
-vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+vim.keymap.set('n', '<C-S-A-h>', '<C-w><C-h>', { desc = 'Move focus to the left window' })
+vim.keymap.set('n', '<C-S-A-a>', '<C-w><C-l>', { desc = 'Move focus to the right window' })
+vim.keymap.set('n', '<C-S-A-e>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
+vim.keymap.set('n', '<C-S-A-u>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
+
+-- Keybinds to create new splits
+vim.keymap.set('n', '<C-S-A-q>', '<cmd>vsplit<CR>', { desc = 'Create a new vertical split' })
+vim.keymap.set('n', '<C-S-A-6>', '<cmd>split<CR>', { desc = 'Create a new horizontal split' })
 
 -- [[ Basic Autocommands ]]
 --  See `:help lua-guide-autocommands`
@@ -203,6 +207,10 @@ vim.api.nvim_create_autocmd('TextYankPost', {
     vim.highlight.on_yank()
   end,
 })
+
+----------------------------------
+-- INSTALL LAZY ------------------
+----------------------------------
 
 -- [[ Install `lazy.nvim` plugin manager ]]
 --    See `:help lazy.nvim.txt` or https://github.com/folke/lazy.nvim for more info
@@ -227,6 +235,11 @@ vim.opt.rtp:prepend(lazypath)
 --    :Lazy update
 --
 -- NOTE: Here is where you install your plugins.
+
+----------------------------------
+-- PLUGINS -----------------------
+----------------------------------
+
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
@@ -256,6 +269,36 @@ require('lazy').setup({
     },
   },
 
+  {
+    'letieu/wezterm-move.nvim',
+    keys = { -- Lazy loading, don't need call setup() function
+      {
+        '<C-S-A-u>',
+        function()
+          require('wezterm-move').move 'u'
+        end,
+      },
+      {
+        '<C-S-A-h>',
+        function()
+          require('wezterm-move').move 'h'
+        end,
+      },
+      {
+        '<C-S-A-e>',
+        function()
+          require('wezterm-move').move 'e'
+        end,
+      },
+      {
+        '<C-S-A-a>',
+        function()
+          require('wezterm-move').move 'a'
+        end,
+      },
+    },
+  },
+
   -- NOTE: Plugins can also be configured to run Lua code when they are loaded.
   --
   -- This is often very useful to both group configuration, as well as handle
@@ -279,36 +322,7 @@ require('lazy').setup({
         mappings = vim.g.have_nerd_font,
         -- If you are using a Nerd Font: set icons.keys to an empty table which will use the
         -- default which-key.nvim defined Nerd Font icons, otherwise define a string table
-        keys = vim.g.have_nerd_font and {} or {
-          Up = '<Up> ',
-          Down = '<Down> ',
-          Left = '<Left> ',
-          Right = '<Right> ',
-          C = '<C-…> ',
-          M = '<M-…> ',
-          D = '<D-…> ',
-          S = '<S-…> ',
-          CR = '<CR> ',
-          Esc = '<Esc> ',
-          ScrollWheelDown = '<ScrollWheelDown> ',
-          ScrollWheelUp = '<ScrollWheelUp> ',
-          NL = '<NL> ',
-          BS = '<BS> ',
-          Space = '<Space> ',
-          Tab = '<Tab> ',
-          F1 = '<F1>',
-          F2 = '<F2>',
-          F3 = '<F3>',
-          F4 = '<F4>',
-          F5 = '<F5>',
-          F6 = '<F6>',
-          F7 = '<F7>',
-          F8 = '<F8>',
-          F9 = '<F9>',
-          F10 = '<F10>',
-          F11 = '<F11>',
-          F12 = '<F12>',
-        },
+        keys = {},
       },
 
       -- Document existing key chains
@@ -752,6 +766,8 @@ require('lazy').setup({
       --  into multiple repos for maintenance purposes.
       'hrsh7th/cmp-nvim-lsp',
       'hrsh7th/cmp-path',
+      'hrsh7th/cmp-vsnip',
+      'hrsh7th/vim-vsnip',
     },
     config = function()
       -- See `:help cmp`
@@ -762,7 +778,11 @@ require('lazy').setup({
       cmp.setup {
         snippet = {
           expand = function(args)
-            luasnip.lsp_expand(args.body)
+            if luasnip then
+              luasnip.lsp_expand(args.body)
+            elseif vim.fn['vsnip#anonymous'] then
+              vim.fn['vsnip#anonymous'](args.body)
+            end
           end,
         },
         completion = { completeopt = 'menu,menuone,noinsert' },
@@ -828,8 +848,158 @@ require('lazy').setup({
           { name = 'nvim_lsp' },
           { name = 'luasnip' },
           { name = 'path' },
+          { name = 'vsnip' },
         },
       }
+    end,
+  },
+
+  {
+    'scalameta/nvim-metals',
+    dependencies = {
+      'nvim-lua/plenary.nvim',
+      {
+        'j-hui/fidget.nvim',
+        opts = {},
+      },
+      {
+        'mfussenegger/nvim-dap',
+        config = function(self, opts)
+          -- Debug settings if you're using nvim-dap
+          local dap = require 'dap'
+
+          dap.configurations.scala = {
+            {
+              type = 'scala',
+              request = 'launch',
+              name = 'RunOrTest',
+              metals = {
+                runType = 'runOrTestFile',
+                --args = { "firstArg", "secondArg", "thirdArg" }, -- here just as an example
+              },
+            },
+            {
+              type = 'scala',
+              request = 'launch',
+              name = 'Test Target',
+              metals = {
+                runType = 'testTarget',
+              },
+            },
+          }
+        end,
+      },
+    },
+    ft = { 'scala', 'sbt', 'java' },
+    opts = function()
+      local metals_config = require('metals').bare_config()
+
+      -- Example of settings
+      metals_config.settings = {
+        showImplicitArguments = true,
+        excludedPackages = { 'akka.actor.typed.javadsl', 'com.github.swagger.akka.javadsl' },
+      }
+
+      -- *READ THIS*
+      -- I *highly* recommend setting statusBarProvider to either "off" or "on"
+      --
+      -- "off" will enable LSP progress notifications by Metals and you'll need
+      -- to ensure you have a plugin like fidget.nvim installed to handle them.
+      --
+      -- "on" will enable the custom Metals status extension and you *have* to have
+      -- a have settings to capture this in your statusline or else you'll not see
+      -- any messages from metals. There is more info in the help docs about this
+      metals_config.init_options.statusBarProvider = 'off'
+
+      -- Example if you are using cmp how to make sure the correct capabilities for snippets are set
+      metals_config.capabilities = require('cmp_nvim_lsp').default_capabilities()
+
+      metals_config.on_attach = function(client, bufnr)
+        require('metals').setup_dap()
+
+        -- LSP vim.keymap.setpings
+        vim.keymap.set('n', 'gD', vim.lsp.buf.definition)
+        vim.keymap.set('n', 'K', vim.lsp.buf.hover)
+        vim.keymap.set('n', 'gi', vim.lsp.buf.implementation)
+        vim.keymap.set('n', 'gr', vim.lsp.buf.references)
+        vim.keymap.set('n', 'gds', vim.lsp.buf.document_symbol)
+        vim.keymap.set('n', 'gws', vim.lsp.buf.workspace_symbol)
+        vim.keymap.set('n', '<leader>cl', vim.lsp.codelens.run)
+        vim.keymap.set('n', '<leader>sh', vim.lsp.buf.signature_help)
+        vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename)
+        vim.keymap.set('n', '<leader>f', vim.lsp.buf.format)
+        vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action)
+
+        vim.keymap.set('n', '<leader>ws', function()
+          require('metals').hover_worksheet()
+        end)
+
+        -- all workspace diagnostics
+        vim.keymap.set('n', '<leader>aa', vim.diagnostic.setqflist)
+
+        -- all workspace errors
+        vim.keymap.set('n', '<leader>ae', function()
+          vim.diagnostic.setqflist { severity = 'E' }
+        end)
+
+        -- all workspace warnings
+        vim.keymap.set('n', '<leader>aw', function()
+          vim.diagnostic.setqflist { severity = 'W' }
+        end)
+
+        -- buffer diagnostics only
+        vim.keymap.set('n', '<leader>d', vim.diagnostic.setloclist)
+
+        vim.keymap.set('n', '[c', function()
+          vim.diagnostic.goto_prev { wrap = false }
+        end)
+
+        vim.keymap.set('n', ']c', function()
+          vim.diagnostic.goto_next { wrap = false }
+        end)
+
+        -- Example mappings for usage with nvim-dap. If you don't use that, you can
+        -- skip these
+        vim.keymap.set('n', '<leader>dc', function()
+          require('dap').continue()
+        end)
+
+        vim.keymap.set('n', '<leader>dr', function()
+          require('dap').repl.toggle()
+        end)
+
+        vim.keymap.set('n', '<leader>dK', function()
+          require('dap.ui.widgets').hover()
+        end)
+
+        vim.keymap.set('n', '<leader>dt', function()
+          require('dap').toggle_breakpoint()
+        end)
+
+        vim.keymap.set('n', '<leader>dso', function()
+          require('dap').step_over()
+        end)
+
+        vim.keymap.set('n', '<leader>dsi', function()
+          require('dap').step_into()
+        end)
+
+        vim.keymap.set('n', '<leader>dl', function()
+          require('dap').run_last()
+        end)
+      end
+
+      return metals_config
+    end,
+    config = function(self, metals_config)
+      local nvim_metals_group = vim.api.nvim_create_augroup('nvim-metals', { clear = true })
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = self.ft,
+        callback = function()
+          require('metals').initialize_or_attach(metals_config)
+        end,
+        group = nvim_metals_group,
+      })
     end,
   },
 
